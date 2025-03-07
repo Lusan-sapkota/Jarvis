@@ -1,0 +1,11 @@
+eel
+hugchat
+pvporcupine
+pyaudio
+pyautogui
+pywhatkit
+pygame
+pyttsx3
+speechrecognition
+numpy
+opencv-python
