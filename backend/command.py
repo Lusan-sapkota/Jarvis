@@ -2,10 +2,11 @@ import time
 import pyttsx3
 import speech_recognition as sr
 import eel
+import sys
 
 def speak(text):
     text = str(text)
-    engine = pyttsx3.init('sapi5')
+    engine = pyttsx3.init('espeak' if sys.platform in ['linux', 'darwin'] else 'sapi5')
     voices = engine.getProperty('voices')
     # print(voices)
     engine.setProperty('voice', voices[2].id)

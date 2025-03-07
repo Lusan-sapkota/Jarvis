@@ -36,7 +36,7 @@ pygame.mixer.init()
 # Define the function to play sound
 @eel.expose
 def play_assistant_sound():
-    sound_file = r"C:\Users\patha\Videos\Jarvis\frontend\assets\audio\start_sound.mp3"
+    sound_file = r"/home/lusan/Documents/Jarvis/frontend/assets/audio/start_sound.mp3" # Change the path to your sound file
     pygame.mixer.music.load(sound_file)
     pygame.mixer.music.play()
     
@@ -187,7 +187,7 @@ def whatsApp(Phone, message, flag, name):
 
 def chatBot(query):
     user_input = query.lower()
-    chatbot = hugchat.ChatBot(cookie_path="backend\cookie.json")
+    chatbot = hugchat.ChatBot(cookie_path="backend/cookie.json")
     id = chatbot.new_conversation()
     chatbot.change_conversation(id)
     response =  chatbot.chat(user_input)

@@ -9,3 +9,5 @@ pyttsx3
 speechrecognition
 numpy
 opencv-python
+opencv-contrib-python
+psutil
