@@ -111,7 +111,7 @@ def get_huggingface_response(query):
         # This is more stable and doesn't rely on the cookie file
         response = requests.post(
             "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
-            headers={"Authorization": "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"},  # Replace with your API key
+            headers={"Authorization": "//"},  # Replace with your API key
             json={"inputs": query}
         )
         
