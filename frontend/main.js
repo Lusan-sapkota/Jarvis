@@ -1,6 +1,11 @@
-$(document).ready(function () {
+// Add debug logging
+console.log("Loading main.js");
 
-  eel.init()()
+$(document).ready(function () {
+  // Log that the document is loaded
+  console.log("Document ready, initializing UI");
+
+  eel.init()();
   $(".text").textillate({
     loop: true,
     speed: 1500,
@@ -40,6 +45,9 @@ $(document).ready(function () {
     rippleColor: "#ffffff",
   });
 
+  // Hide the Oval section initially
+  $("#Oval").hide();
+
   $("#MicBtn").click(function () {
     eel.play_assistant_sound();
     $("#Oval").attr("hidden", true);
@@ -64,7 +72,10 @@ $(document).ready(function () {
     if (message != "") {
       $("#Oval").attr("hidden", true);
       $("#SiriWave").attr("hidden", false);
-      eel.takeAllCommands(message);
+      
+      // Use the new function name here
+      eel.process_command(message);
+      
       $("#chatbox").val("");
       $("#MicBtn").attr("hidden", false);
       $("#SendBtn").attr("hidden", true);
@@ -81,6 +92,34 @@ $(document).ready(function () {
       $("#MicBtn").attr("hidden", true);
       $("#SendBtn").attr("hidden", false);
     }
+  }
+  // Expose the function to Python
+  eel.expose(showMainInterface);
+  function showMainInterface() {
+      console.log("Showing main interface");
+      
+      // Hide all the authentication and loading elements
+      $("#Loader").hide();
+      $("#FaceAuth").hide();
+      $("#FaceAuthSuccess").hide();
+      $("#Start").hide();
+      $("#HelloGreet").hide();
+      
+      // Show the main oval interface
+      $("#Oval").show();
+      console.log("Main interface displayed");
+      
+      // Trigger any initialization for the main interface
+      setupMainInterface();
+  }
+  
+  // Setup the main interface
+  function setupMainInterface() {
+      console.log("Setting up main interface");
+      // Initialize any UI components
+      
+      // Focus the chat input
+      $("#chatbox").focus();
   }
 
   $("#chatbox").keyup(function () {
@@ -101,4 +140,33 @@ $(document).ready(function () {
       PlayAssistant(message);
     }
   });
+
+  // Make sure other functions are properly defined
+  eel.expose(hideLoader);
+  function hideLoader() {
+      console.log("Hiding loader");
+      $("#Loader").hide();
+  }
+  
+  eel.expose(hideFaceAuth);
+  function hideFaceAuth() {
+      console.log("Hiding face auth");
+      $("#FaceAuth").hide();
+  }
+  
+  eel.expose(hideFaceAuthSuccess);
+  function hideFaceAuthSuccess() {
+      console.log("Hiding face auth success");
+      $("#FaceAuthSuccess").hide();
+  }
+  
+  eel.expose(hideStart);
+  function hideStart() {
+      console.log("Hiding start");
+      $("#Start").hide();
+  }
+  
+  // Call init function when page loads
+  console.log("Calling init function");
+  eel.init();
 });

@@ -1,0 +1,11 @@
+[
+  {
+    "name": "hf-chat",
+    "value": "REPLACE_WITH_YOUR_ACTUAL_TOKEN",
+    "domain": "huggingface.co",
+    "path": "/chat",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": true
+  }
+]

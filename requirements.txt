@@ -11,3 +11,4 @@ numpy
 opencv-python
 opencv-contrib-python
 psutil
+requests
