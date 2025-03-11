@@ -6,9 +6,15 @@ A sophisticated voice-controlled personal assistant with facial recognition secu
 
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.6%2B-blue)](https://www.python.org/downloads/)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-lightgrey)](https://github.com/yourusername/jarvis)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-lightgrey)](https://github.com/yourusername/jarvis)
 
 > **Note**: This project is actively developed with weekly feature updates and improvements.
+
+<div class="showcase">
+  <img src="frontend/assets/img/showcase1.png" alt="Facial Recognition" class="showcase-img">
+  <img src="frontend/assets/img/showcase2.png" alt="Jarvis Interface" class="showcase-img">
+  <img src="frontend/assets/img/showcase3.png" alt="Voice Commands" class="showcase-img">
+</div>
 
 ## 📋 Features
 
@@ -16,25 +22,30 @@ A sophisticated voice-controlled personal assistant with facial recognition secu
   - Personalized user recognition
   - Multiple user profiles support
   - Secure login system
+  - Privacy-focused with local processing
 
-- **Voice Command System**
+- **Advanced Voice Command System**
   - Natural language processing
   - Customizable command library
   - Contextual responses
+  - Multilingual support
 
-- **Hotword Activation**
+- **Intelligent Hotword Activation**
   - Responds to "Jarvis" wake word
   - Configurable sensitivity
+  - Background noise filtering
 
-- **Web Interface**
+- **Elegant Web Interface**
   - Modern responsive design
   - Real-time visual feedback
   - Chat history and interaction logging
+  - Dark/light theme options
 
 - **System Automation**
   - Control compatible smart home devices
   - Schedule tasks and reminders
   - File and web search capabilities
+  - Calendar integration
 
 ## 🖥️ System Requirements
 
@@ -43,19 +54,21 @@ A sophisticated voice-controlled personal assistant with facial recognition secu
   - Microphone
   - Speakers/Headphones
   - 4GB+ RAM recommended
+  - 500MB free disk space
 
 - **Software**:
   - Python 3.6 or higher
   - Modern web browser (Chrome/Firefox recommended)
   - OpenCV with face recognition support
+  - Internet connection for web searches and updates
 
 ## 🌐 Platform Compatibility
 
 | Platform | Status | Notes |
 |----------|--------|-------|
-| Linux    | ✅ Full support | Thoroughly tested |
-| Windows  | ⚠️ Partial support | May require camera configuration adjustments |
-| macOS    | ⚠️ Limited testing | Basic functionality works |
+| Linux    | ✅ Full support | Thoroughly tested on Ubuntu 20.04+ and Debian 10+ |
+| Windows  | ⚠️ Partial support | Works on Windows 10/11, may require camera configuration adjustments |
+| macOS    | ⚠️ Limited testing | Basic functionality works on macOS 11+ (Big Sur) |
 
 > **Note**: Currently primarily tested and optimized for Linux environments. Cross-platform improvements are ongoing.
 
@@ -106,6 +119,8 @@ WEATHER_API_KEY=your_weather_api_key_here
 # Configuration
 DEBUG_MODE=False
 LOG_LEVEL=INFO
+CAMERA_INDEX=0
+MIC_INDEX=0
 ```
 
 ## 🔐 Facial Recognition Setup
@@ -133,6 +148,7 @@ This will:
 - Process your face samples
 - Create a trainer.yml file
 - Save the model in the trainer directory
+- Optimize recognition parameters for your hardware
 
 ## 🚀 Running the Application
 
@@ -158,6 +174,9 @@ Example commands you can use:
 - "Jarvis, play some music"
 - "Jarvis, search for Python tutorials"
 - "Jarvis, tell me a joke"
+- "Jarvis, turn on the living room lights"
+- "Jarvis, what's on my calendar today?"
+- "Jarvis, send an email to John"
 
 ## 🔧 Troubleshooting
 
@@ -172,6 +191,9 @@ ls -l backend/auth/trainer/trainer.yml
 # Rebuild your training data in better lighting
 python backend/auth/sample.py
 python backend/auth/trainer.py
+
+# Test recognition separately
+python backend/auth/test_recognition.py
 ```
 
 ### Camera Problems
@@ -184,12 +206,17 @@ ls -l /dev/video*
 
 # Ensure no other application is using the camera
 sudo fuser -v /dev/video0
+
+# Try different camera indices in your .env file
+CAMERA_INDEX=1
 ```
 
 The application tries multiple camera backends:
 - `cv2.CAP_ANY`
 - `cv2.CAP_V4L`
 - `cv2.CAP_V4L2`
+- `cv2.CAP_DSHOW` (Windows)
+- `cv2.CAP_AVFOUNDATION` (macOS)
 
 ### Audio Issues
 
@@ -201,6 +228,9 @@ python -c "import pyaudio; p = pyaudio.PyAudio(); [print(p.get_device_info_by_in
 
 # Test microphone
 python backend/tests/test_audio.py
+
+# Try different microphone indices in your .env file
+MIC_INDEX=1
 ```
 
 ## 🧠 Developer Notes
@@ -214,18 +244,37 @@ jarvis/
 │   ├── auth/              # Authentication modules
 │   │   ├── sample.py      # Captures face samples
 │   │   ├── trainer.py     # Creates face recognition model
-│   │   └── recoganize.py  # Authenticates users
+│   │   └── recognize.py   # Authenticates users
 │   ├── command.py         # Command processing
 │   ├── feature.py         # Core assistant features
+│   ├── nlp/               # Natural language processing
+│   │   ├── intent.py      # Intent recognition
+│   │   └── entity.py      # Entity extraction
 │   └── utils/             # Utility functions
+│       ├── audio.py       # Audio processing
+│       ├── camera.py      # Camera handling
+│       └── network.py     # Network operations
 ├── frontend/              # Web interface files
 │   ├── index.html         # Main UI
 │   ├── styles/            # CSS files
+│   │   ├── main.css       # Main stylesheet
+│   │   └── themes/        # Theme variations
 │   ├── scripts/           # JavaScript files
+│   │   ├── main.js        # Core functionality
+│   │   ├── voice.js       # Voice processing
+│   │   └── ui.js          # UI interactions
 │   └── assets/            # Images, icons, etc.
+│       ├── img/           # Images
+│       ├── icons/         # UI icons
+│       └── sounds/        # Audio cues
 ├── data/                  # Data storage
-│   └── faces/             # Face samples
+│   ├── faces/             # Face samples
+│   ├── users/             # User profiles
+│   └── logs/              # Application logs
 └── tests/                 # Test modules
+    ├── test_auth.py       # Authentication tests
+    ├── test_commands.py   # Command tests
+    └── test_features.py   # Feature tests
 ```
 
 ### Adding Features
@@ -246,6 +295,37 @@ def process_command(command):
 def your_new_function():
     # Implementation
     return "Response to the user"
+```
+
+3. Add tests for your new feature:
+```python
+# tests/test_features.py
+def test_your_new_function():
+    result = your_new_function()
+    assert result == "Expected response"
+```
+
+## 📊 Performance Optimization
+
+For better performance on resource-constrained systems:
+
+```bash
+# Run in lightweight mode
+python app.py --lightweight
+
+# Disable unnecessary features
+python app.py --no-gui  # Terminal mode
+python app.py --no-hotword  # Disable always-listening mode
+```
+
+## 🔄 Updates and Maintenance
+
+To update Jarvis to the latest version:
+
+```bash
+git pull origin main
+pip install -r requirements.txt
+python migrate.py  # Apply any database migrations
 ```
 
 ## 🤝 Contributing
@@ -275,6 +355,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- Thanks to all contributors and testers
+- Thanks in advance to all contributors and testers
 - Special thanks to the OpenCV and Python communities
 - All the open-source libraries that made this project possible
+
+## 🔮 Roadmap (Maybe in future)
+
+- [ ] Mobile application support
+- [ ] Cloud sync for user preferences
+- [ ] Advanced NLP for more natural conversations
+- [ ] Integration with additional smart home platforms
+- [ ] Offline mode for privacy-focused users
