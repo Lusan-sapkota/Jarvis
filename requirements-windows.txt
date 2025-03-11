@@ -13,3 +13,5 @@ comtypes
 psutil
 opencv-contrib-python
 requests
+wikipedia
+python-dotenv

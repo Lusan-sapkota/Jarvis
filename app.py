@@ -5,12 +5,18 @@ import time
 import threading
 import traceback
 from backend.auth import recoganize
-from backend.feature import *
+from backend.feature import (
+    chatBot, 
+    play_assistant_sound, 
+    enter_sleep_mode, 
+    exit_sleep_mode,
+    get_sleep_status, 
+    openCommand,
+    hotword
+)
+from backend.command import speak, takecommand
+from backend.db import initialize_linux_commands
 import speech_recognition as sr
-import json
-import os.path
-import requests
-from pathlib import Path
 
 # Initialize Eel
 frontend_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend")
@@ -22,14 +28,6 @@ keep_running = True
 
 # Track if authentication has already been completed
 authentication_done = False
-
-def speak_safely(text):
-    """Safe wrapper for speak function"""
-    try:
-        print(f"Speaking: '{text}'")
-        speak(text)
-    except Exception as e:
-        print(f"Error in speak: {e}")
 
 @eel.expose
 def init():
@@ -48,7 +46,7 @@ def init():
         flag = recoganize.AuthenticateFace()
         if flag == 1:
             print("Face recognized successfully")
-            speak_safely("Face recognized successfully")
+            speak("Face recognized successfully")
             
             # Mark authentication as complete
             authentication_done = True
@@ -62,7 +60,7 @@ def init():
             # Update UI
             eel.hideFaceAuth()
             eel.hideFaceAuthSuccess()
-            speak_safely("Welcome to Your Assistant")
+            speak("Welcome to Your Assistant")
             eel.hideStart()
             
             # Wait before showing main interface
@@ -75,202 +73,91 @@ def init():
                 print("Main interface should be visible now")
                 
                 # Final message
-                speak_safely("I am ready for your commands")
+                speak("I am ready for your commands")
             except Exception as e:
                 print(f"Error showing main interface: {e}")
                 traceback.print_exc()
         else:
             print("Face not recognized")
-            speak_safely("Face not recognized. Please try again")
+            speak("Face not recognized. Please try again")
     except Exception as e:
         print(f"Error during initialization: {e}")
         traceback.print_exc()
 
-# Add this function to handle Hugging Face API calls
-def get_huggingface_response(query):
-    """Get response from Hugging Face API with error handling"""
-    try:
-        # Check if cookie file exists
-        cookie_path = os.path.join('backend', 'cookie.json')
-        if not os.path.exists(cookie_path):
-            print("Creating empty cookie.json file")
-            os.makedirs(os.path.dirname(cookie_path), exist_ok=True)
-            with open(cookie_path, 'w') as f:
-                json.dump([{
-                    "name": "hf-chat",
-                    "value": "placeholder",
-                    "domain": "huggingface.co",
-                    "path": "/chat",
-                    "expires": -1,
-                    "httpOnly": False,
-                    "secure": True
-                }], f)
-            print(f"Created cookie file at {cookie_path}")
-            
-        # Try direct API approach instead of huggingchat library
-        # This is more stable and doesn't rely on the cookie file
-        response = requests.post(
-            "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill",
-            headers={"Authorization": "//"},  # Replace with your API key
-            json={"inputs": query}
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            if isinstance(result, list) and result:
-                return result[0].get('generated_text', "I'm not sure how to respond to that.")
-            return "I'm not sure how to respond to that."
-        else:
-            print(f"API error: {response.status_code} - {response.text}")
-            return "I'm having trouble connecting to my knowledge base."
-            
-    except Exception as e:
-        print(f"Error in Hugging Face API: {e}")
-        traceback.print_exc()
-        return "I encountered an error while processing your request."
-
-# Add this function for fallback responses
-
-def get_fallback_response(query):
-    """Generate a fallback response when API fails"""
-    fallback_responses = [
-        "I'm sorry, I don't have enough information to answer that properly.",
-        "That's an interesting question. I'm still learning about that topic.",
-        "I'm having trouble connecting to my knowledge base. Let me give a simple response.",
-        "I understand you're asking about something, but I'm not quite sure how to answer yet."
-    ]
-    
-    # Use different responses for different types of queries
-    if "?" in query:
-        return "That's an interesting question. I'll need to learn more about that topic."
-    elif any(word in query.lower() for word in ["help", "assist", "support"]):
-        return "I'm here to help. What specific assistance do you need?"
-    elif any(word in query.lower() for word in ["thank", "thanks"]):
-        return "You're welcome! Is there anything else I can help with?"
+@eel.expose
+def toggle_sleep_mode():
+    """Toggle sleep mode on/off"""
+    current_status = get_sleep_status()
+    if current_status:
+        exit_sleep_mode()
     else:
-        import random
-        return random.choice(fallback_responses)
+        enter_sleep_mode()
+    return not current_status
 
-# Update the process_command function to use Hugging Face
 @eel.expose
 def process_command(command):
     """Process user commands from the UI"""
     print(f"Received command: {command}")
+    
+    if get_sleep_status() and not ("wake up" in command.lower() or "wakeup" in command.lower()):
+        response = "I'm currently in sleep mode. Say 'wake up' to activate me."
+        # Make sure to update the UI before returning
+        eel.receiverText(response)
+        return response
+    
     try:
-        # Process built-in commands locally
-        if "weather" in command.lower():
-            response = "I'm sorry, I don't have access to weather information yet."
-        elif "time" in command.lower():
-            from datetime import datetime
-            current_time = datetime.now().strftime("%I:%M %p")
-            response = f"The current time is {current_time}"
-        elif "hello" in command.lower() or "hi" in command.lower():
-            response = "Hello! How can I help you today?"
-        elif "date" in command.lower():
-            from datetime import datetime
-            current_date = datetime.now().strftime("%A, %B %d, %Y")
-            response = f"Today is {current_date}"
-        elif "name" in command.lower():
-            response = "My name is Jarvis. I'm your virtual assistant."
-        else:
-            # Use Hugging Face API for other queries
-            try:
-                print("Querying Hugging Face API...")
-                response = get_huggingface_response(command)
-                print(f"API response: {response}")
-            except Exception as e:
-                print(f"Error with Hugging Face API: {e}")
-                response = get_fallback_response(command)
+        # First check for wake command
+        if get_sleep_status() and ("wake up" in command.lower() or "wakeup" in command.lower()):
+            exit_sleep_mode()
+            response = "I'm awake and ready to assist you."
+            eel.receiverText(response)
+            return response
         
-        # Log and speak the response
-        print(f"Final response: {response}")
-        speak_safely(response)
+        # Check for sleep command
+        if "sleep" in command.lower() or "go to sleep" in command.lower():
+            enter_sleep_mode()
+            response = "Sleep mode activated"
+            eel.receiverText(response)
+            return response
         
+        # Check for open command
+        if "open" in command.lower():
+            app_name = command.lower().replace("open", "").strip()
+            if app_name:
+                openCommand(command)
+                response = f"Opening {app_name}"
+                eel.receiverText(response)
+                return response
+        
+        # For all other commands, use chatBot
+        response = chatBot(command)
+        # Explicitly update the UI with the response
+        eel.receiverText(response)
         return response
     except Exception as e:
         print(f"Error processing command: {e}")
         error_message = "I'm sorry, I encountered an error processing your command."
-        speak_safely(error_message)
+        speak(error_message)
+        eel.receiverText(error_message)
         traceback.print_exc()
         return error_message
 
 @eel.expose
 def listen_for_command():
-    """Listen for voice command using microphone with better error handling"""
-    recognizer = sr.Recognizer()
-    
+    """Listen for voice command using microphone"""
     try:
-        print("Listening for voice command...")
-        
-        # Try to find a working microphone
-        mic_found = False
-        microphones = sr.Microphone.list_microphone_names()
-        print(f"Available microphones: {microphones}")
-        
-        # Try default microphone first
-        try:
-            with sr.Microphone() as source:
-                print("Using default microphone")
-                recognizer.adjust_for_ambient_noise(source)
-                print("Listening...")
-                audio = recognizer.listen(source, timeout=5)
-                mic_found = True
-        except Exception as e:
-            print(f"Error with default microphone: {e}")
-            
-        # If default fails, try device index 0
-        if not mic_found:
-            try:
-                print("Trying microphone with device_index=0")
-                with sr.Microphone(device_index=0) as source:
-                    recognizer.adjust_for_ambient_noise(source)
-                    print("Listening...")
-                    audio = recognizer.listen(source, timeout=5)
-                    mic_found = True
-            except Exception as e:
-                print(f"Error with device_index=0: {e}")
-                
-        # If we got audio, try to recognize it
-        if mic_found:
-            try:
-                print("Got audio, recognizing...")
-                text = recognizer.recognize_google(audio)
-                print(f"Recognized: '{text}'")
-                
-                # Process the recognized command
-                process_command(text)
-                return text
-            except sr.UnknownValueError:
-                print("Could not understand audio")
-                speak_safely("I couldn't understand what you said.")
-                return ""
-            except sr.RequestError as e:
-                print(f"Could not request results: {e}")
-                speak_safely("I'm having trouble accessing the speech recognition service.")
-                return ""
-        else:
-            error_msg = "No working microphone found"
-            print(error_msg)
-            speak_safely(error_msg)
-            return ""
+        query = takecommand()
+        if query:
+            # Process the recognized command
+            response = process_command(query)
+            return query
+        return ""
     except Exception as e:
         print(f"Error in voice recognition: {e}")
         traceback.print_exc()
-        speak_safely("There was an error with the voice recognition system.")
+        if not get_sleep_status():
+            speak("There was an error with the voice recognition system.")
         return ""
-
-def simulate_hotword():
-    """Simulate hotword detection"""
-    while keep_running:
-        time.sleep(30)  # Check every 30 seconds
-        try:
-            print("Simulating hotword activation")
-            speak_safely("How can I help you?")
-            
-            # Optional: Also show a visual indicator in the UI
-            eel.activateAssistant()  # Make sure to define this in your JS
-        except Exception as e:
-            print(f"Error in hotword simulation: {e}")
 
 def open_browser():
     """Open the browser with the application URL"""
@@ -289,8 +176,11 @@ def open_browser():
 # Start the application
 if __name__ == "__main__":
     try:
-        # Start hotword simulation in background
-        hotword_thread = threading.Thread(target=simulate_hotword, daemon=True)
+        # Initialize database
+        initialize_linux_commands()
+        
+        # Start hotword detection in background
+        hotword_thread = threading.Thread(target=hotword, daemon=True)
         hotword_thread.start()
         
         # Open browser

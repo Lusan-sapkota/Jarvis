@@ -73,14 +73,19 @@ $(document).ready(function () {
       $("#Oval").attr("hidden", true);
       $("#SiriWave").attr("hidden", false);
       
-      // Use the new function name here
-      eel.process_command(message);
+      // Use the process_command function
+      eel.process_command(message)().then(function(response) {
+        // Don't automatically hide SiriWave - let the user go back manually
+        console.log("Command processed:", response);
+      }).catch(function(error) {
+        console.error("Error processing command:", error);
+      });
       
       $("#chatbox").val("");
       $("#MicBtn").attr("hidden", false);
       $("#SendBtn").attr("hidden", true);
     } else {
-      console.log("Empty message, nothing sent."); // Log if the message is empty
+      console.log("Empty message, nothing sent.");
     }
   }
 
@@ -166,6 +171,14 @@ $(document).ready(function () {
       $("#Start").hide();
   }
   
+  // Add event handler for back button
+  $("#BackToHomeBtn").click(function() {
+    console.log("Back button clicked");
+    $("#SiriWave").attr("hidden", true);
+    $("#Oval").attr("hidden", false);
+    $("#chatbox").val("").focus();
+  });
+
   // Call init function when page loads
   console.log("Calling init function");
   eel.init();

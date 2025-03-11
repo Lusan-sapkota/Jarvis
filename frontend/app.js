@@ -122,3 +122,36 @@ function displayMessage(text, isUser) {
     console.log((isUser ? "User" : "Assistant") + " message: " + text);
     // You could add a chat display area and show messages there
 }
+
+// Add this function to fix the UI display
+eel.expose(receiverText);
+function receiverText(text) {
+    console.log("Received text from Python:", text);
+    
+    try {
+        // Update multiple UI elements with the response
+        if($(".siri-message").length) {
+            $(".siri-message").text(text);
+        }
+        
+        // Also update the dedicated response text area
+        if($("#responseText").length) {
+            $("#responseText").html(text);
+        }
+        
+        // Make sure the message is visible
+        if ($("#SiriWave").is(":hidden")) {
+            $("#SiriWave").show();
+        }
+        
+        // Don't hide the SiriWave automatically
+        
+        // Update any other UI elements that should show the response
+        $("#chatbox").prop("disabled", false);
+        
+    } catch(error) {
+        console.error("Error updating UI with response:", error);
+    }
+    
+    return true; // Always return a value to avoid Eel errors
+}

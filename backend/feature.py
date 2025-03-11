@@ -1,13 +1,3 @@
-# import playsound
-# import eel
-
-
-# @eel.expose
-# def playAssistantSound():
-#     music_dir = "frontend\\assets\\audio\\start_sound.mp3"
-#     playsound(music_dir)
-
-
 from compileall import compile_path
 import os
 import re
@@ -43,43 +33,259 @@ def play_assistant_sound():
     pygame.mixer.music.load(sound_file)
     pygame.mixer.music.play()
     
-    
+# Import necessary libraries 
+import os
+import re
+import sys
+import pyttsx3
+import struct
+import subprocess
+import time
+import webbrowser
+import eel
+from hugchat import hugchat 
+import pvporcupine
+import pyaudio
+import pyautogui
+import pywhatkit as kit
+import pygame
+from backend.command import speak
+from backend.config import ASSISTANT_NAME
+import sqlite3
+import threading
+import wikipedia
+import json
+import requests
+import dotenv
+import os
+
+# Load environment variables
+dotenv.load_dotenv()
+
+# Initialize Wikipedia language
+wikipedia.set_lang("en")
+
+# Initialize sleep mode
+sleep_mode = False
+
+conn = sqlite3.connect("jarvis.db")
+cursor = conn.cursor()
+
+# Initialize pygame mixer
+pygame.mixer.init()
+
+# Updated openCommand for Linux
 def openCommand(query):
     query = query.replace(ASSISTANT_NAME,"")
     query = query.replace("open","")
-    query.lower()
+    query = query.lower().strip()
+    
+    # Dictionary of common Linux applications and their commands
+    linux_apps = {
+        "code": ["code", "code ."],
+        "vscode": ["code", "code ."],
+        "visual studio code": ["code", "code ."],
+        "chrome": ["google-chrome", "google-chrome"],
+        "google chrome": ["google-chrome", "google-chrome"],
+        "firefox": ["firefox", "firefox"],
+        "android studio": ["studio", "/opt/android-studio/bin/studio.sh"],
+        "terminal": ["gnome-terminal", "gnome-terminal"],
+        "files": ["nautilus", "nautilus"],
+        "file manager": ["nautilus", "nautilus"],
+        "calculator": ["gnome-calculator", "gnome-calculator"],
+        "text editor": ["gedit", "gedit"],
+        "spotify": ["spotify", "spotify"],
+        "discord": ["discord", "discord"],
+        "slack": ["slack", "slack"],
+        "vlc": ["vlc", "vlc"],
+        "obs": ["obs", "obs"]
+    }
     
     app_name = query.strip()
 
     if app_name != "":
-
         try:
-            cursor.execute( 
+            # First try the database lookup
+            cursor.execute(
                 'SELECT path FROM sys_command WHERE name IN (?)', (app_name,))
             results = cursor.fetchall()
 
-            if len(results != 0):
-                speak("Opening "+query)
-                os.startfile(results[0][0])
-
-            elif len(results == 0): 
+            if results and len(results) > 0:
+                speak("Opening " + app_name)
+                subprocess.Popen(results[0][0], shell=True)
+            
+            # Then try web commands
+            elif results and len(results) == 0: 
                 cursor.execute(
                 'SELECT url FROM web_command WHERE name IN (?)', (app_name,))
                 results = cursor.fetchall()
                 
-                if len(results != 0):
-                    speak("Opening "+query)
+                if results and len(results) > 0:
+                    speak("Opening " + app_name)
                     webbrowser.open(results[0][0])
-
-                else:
-                    speak("Opening "+query)
+                
+                # Then try our predefined Linux apps dictionary
+                elif app_name in linux_apps:
+                    speak("Opening " + app_name)
                     try:
-                        os.system('start '+query)
-                    except:
-                        speak("not found")
-        except:
-            speak("some thing went wrong")
+                        subprocess.Popen(linux_apps[app_name][1], shell=True)
+                    except Exception as e:
+                        print(f"Error opening application: {e}")
+                        speak("Failed to open " + app_name)
+                
+                # Finally try just launching the app name directly
+                else:
+                    speak("Opening " + app_name)
+                    try:
+                        subprocess.Popen(app_name, shell=True)
+                    except Exception as e:
+                        print(f"Error opening application: {e}")
+                        speak("Sorry, I couldn't find " + app_name)
+        except Exception as e:
+            print(f"Error in openCommand: {e}")
+            speak("Something went wrong while opening " + app_name)
 
+# Sleep mode functions
+@eel.expose
+def enter_sleep_mode():
+    global sleep_mode
+    sleep_mode = True
+    speak("Entering sleep mode. Say 'wake up' to activate me again.")
+    eel.DisplayMessage("Sleeping...")
+    return sleep_mode
+
+@eel.expose
+def exit_sleep_mode():
+    global sleep_mode
+    sleep_mode = False
+    current_hour = time.localtime().tm_hour
+    
+    if current_hour < 12:
+        greeting = "Good morning!"
+    elif current_hour < 18:
+        greeting = "Good afternoon!"
+    else:
+        greeting = "Good evening!"
+        
+    speak(f"{greeting} I'm back online and ready to assist you.")
+    eel.DisplayMessage("Awake and listening...")
+    return sleep_mode
+
+# Enhanced chatBot with Wikipedia and Gemini API
+def chatBot(query):
+    global sleep_mode
+    
+    # Handle sleep and wake up commands
+    if "sleep" in query.lower() or "go to sleep" in query.lower():
+        return enter_sleep_mode()
+        
+    if sleep_mode and ("wake up" in query.lower() or "wakeup" in query.lower()):
+        return exit_sleep_mode()
+        
+    # If in sleep mode, ignore other commands
+    if sleep_mode:
+        print("Currently in sleep mode. Say 'wake up' to activate.")
+        return None
+        
+    # Handle built-in commands
+    if "time" in query.lower():
+        from datetime import datetime
+        current_time = datetime.now().strftime("%I:%M %p")
+        response = f"The current time is {current_time}"
+        speak(response)
+        return response
+        
+    elif "date" in query.lower():
+        from datetime import datetime
+        current_date = datetime.now().strftime("%A, %B %d, %Y")
+        response = f"Today is {current_date}"
+        speak(response)
+        return response
+        
+    elif "hello" in query.lower() or "hi" in query.lower() or "hey" in query.lower():
+        import random
+        greetings = [
+            "Hello! How can I help you today?",
+            "Hi there! What can I do for you?",
+            "Hey! I'm listening. What do you need?",
+            "Greetings! How may I assist you?"
+        ]
+        response = random.choice(greetings)
+        speak(response)
+        return response
+    
+    # Try Wikipedia search
+    try:
+        print("Searching Wikipedia...")
+        # Only use Wikipedia for search-like queries
+        if any(word in query.lower() for word in ["what is", "who is", "define", "explain"]):
+            search_term = query.lower()
+            for prefix in ["what is", "who is", "define", "explain"]:
+                search_term = search_term.replace(prefix, "").strip()
+                
+            results = wikipedia.summary(search_term, sentences=2)
+            response = f"According to Wikipedia: {results}"
+            print(response)
+            speak(response)
+            return response
+        else:
+            raise ValueError("Not a knowledge query")
+    except Exception as wiki_error:
+        print(f"Wikipedia error: {wiki_error}")
+        
+        # Try Gemini API
+        try:
+            print("Using Gemini API...")
+            # Get API key from environment
+            gemini_api_key = os.getenv("GEMINI_API_KEY")
+            
+            if not gemini_api_key:
+                # Create a helpful response if API key not found
+                response = "I couldn't find information about that. To enable AI responses, please set up a Gemini API key in the .env file."
+                speak(response)
+                return response
+            
+            # Set up Gemini API request
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+            headers = {
+                "Content-Type": "application/json",
+            }
+            
+            data = {
+                "contents": [{"parts": [{"text": query}]}],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 800,
+                    "topP": 0.8,
+                    "topK": 40
+                }
+            }
+            
+            # Make the API request
+            response = requests.post(
+                f"{url}?key={gemini_api_key}",
+                headers=headers,
+                json=data
+            )
+            
+            # Process the response
+            result = response.json()
+            if "candidates" in result and len(result["candidates"]) > 0:
+                text_response = result["candidates"][0]["content"]["parts"][0]["text"]
+                speak(text_response)
+                return text_response
+            else:
+                fallback_response = "I don't have enough information to answer that question properly."
+                speak(fallback_response)
+                return fallback_response
+                
+        except Exception as gemini_error:
+            print(f"Gemini API error: {gemini_error}")
+            
+            # Provide a good fallback response
+            final_response = "I'm sorry, I couldn't process your request. Please check your internet connection and try again."
+            speak(final_response)
+            return final_response
 
 def PlayYoutube(query):
     search_term = extract_yt_term(query)
@@ -314,32 +520,74 @@ def whatsApp(Phone, message, flag, name):
     speak(jarvis_message)
 
 
-def chatBot(query):
-    user_input = query.lower()
-    chatbot = hugchat.ChatBot(cookie_path="backend/cookie.json")
-    id = chatbot.new_conversation()
-    chatbot.change_conversation(id)
-    response =  chatbot.chat(user_input)
-    print(response)
-    speak(response)
-    return response
-
 # Create a global lock for TTS operations
 tts_lock = threading.Lock()
 
-# Replace the pyttsx3 speak function with a more stable approach for Linux
-def speak(text):
-    """Use espeak directly via subprocess for more stability"""
-    with tts_lock:  # Ensure only one speech command runs at a time
-        try:
-            # Use espeak directly via command line
-            subprocess.run(['espeak', '-v', 'en+m3', text], 
-                          check=True, 
-                          stdout=subprocess.DEVNULL, 
-                          stderr=subprocess.DEVNULL)
-            # Small delay to ensure speech is complete
-            time.sleep(0.1)
-        except Exception as e:
-            print(f"Error in speak function: {e}")
-            import traceback
-            traceback.print_exc()
+# Add function to expose sleep status to other modules
+@eel.expose
+def get_sleep_status():
+    """Return current sleep mode status"""
+    global sleep_mode
+    return sleep_mode
+
+def feature_process_command(query):  # Renamed from process_command
+    """Main function to process user commands"""
+    global sleep_mode
+    
+    # Handle sleep and wake up commands
+    if "sleep" in query.lower() or "go to sleep" in query.lower():
+        return enter_sleep_mode()
+        
+    if sleep_mode and ("wake up" in query.lower() or "wakeup" in query.lower()):
+        return exit_sleep_mode()
+        
+    # If in sleep mode, ignore other commands
+    if sleep_mode:
+        print("Currently in sleep mode. Say 'wake up' to activate.")
+        return None
+    
+    # Determine what type of command this is
+    if "open" in query.lower():
+        openCommand(query)
+        return "Command executed"
+        
+    if "play" in query.lower() and "youtube" in query.lower():
+        PlayYoutube(query)
+        return "Playing video on YouTube"
+        
+    if any(x in query.lower() for x in ["call", "message", "whatsapp"]):
+        # Handle contact commands
+        if "call" in query.lower():
+            mobile, name = findContact(query)
+            if mobile != 0:
+                whatsApp(mobile, "", "call", name)
+            return "Call initiated"
+        elif "message" in query.lower() or "whatsapp" in query.lower():
+            mobile, name = findContact(query)
+            if mobile != 0:
+                # Extract message content - this is a simplification
+                message = "Hello" # You would extract the actual message here
+                whatsApp(mobile, message, "message", name)
+            return "Message sent"
+    
+    # For general queries, use the chatBot
+    return chatBot(query)
+
+# Removed @eel.expose decorator to fix name collision with app.py
+def process_command(query):
+    """Main function to process user commands - this is a wrapper for app.py integration"""
+    # Pass the query to the existing process_command in app.py
+    # The actual implementation is in app.py, this is just to fix the import error
+    try:
+        # For simple built-in commands
+        if "sleep" in query.lower() or "go to sleep" in query.lower():
+            return enter_sleep_mode()
+        
+        if sleep_mode and ("wake up" in query.lower() or "wakeup" in query.lower()):
+            return exit_sleep_mode()
+        
+        # For general queries, use chatBot
+        return chatBot(query)
+    except Exception as e:
+        print(f"Error in feature.process_command: {e}")
+        return "Sorry, I encountered an error processing that command."

@@ -6,7 +6,7 @@
     <title>Jarvis</title>
     <link
       rel="shortcut icon"
-      href="/frontend/assets/img/logo.ico"
+      href="/frontend/assets/img/logo.png"
       type="image/x-icon"
     />
 
@@ -470,18 +470,28 @@
       </section>
 
       <div id="SiriWave" class="mb-4">
-        <div class="container">
-          <div class="row">
-            <div class="col-md-12">
-              <div
-                class="d-flex justify-content-center align-items-center"
-                style="height: 100vh"
-              >
-                <div class="">
-                  <p class="text-start text-light mb-4 siri-message">
-                    Hello, I am Your Assistant
-                  </p>
-                  <div id="siri-container"></div>
+        <div class="container vh-100 d-flex justify-content-center align-items-center">
+          <div class="row w-100">
+            <!-- Siri Wave and Message -->
+            <div class="col-md-6 text-center text-md-start text-light">
+              <p class="mb-4 siri-message">Hello, I am Your Assistant</p>
+              <div id="siri-container"></div>
+              <!-- Back button -->
+              <button id="BackToHomeBtn" class="btn btn-outline-light mt-4">
+                <i class="bi bi-arrow-left"></i> Back
+              </button>
+            </div>
+        
+            <!-- Response Card -->
+            <div class="col-md-6">
+              <div class="card bg-dark text-light">
+                <div class="card-header">
+                  <h5>Response Text</h5>
+                </div>
+                <div class="card-body">
+                  <div id="responseText" class="text-light">
+                    <!-- Response text will be displayed here -->
+                  </div>
                 </div>
               </div>
             </div>

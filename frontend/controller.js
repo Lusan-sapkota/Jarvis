@@ -25,8 +25,15 @@ $(document).ready(function () {
     }
   }
 
-  eel.expose(receiverText);
+  // Remove or modify the existing receiverText function to avoid conflicts
+  // eel.expose(receiverText); // Comment out or remove this line
   function receiverText(message) {
+    // Rename this function to avoid conflicts
+    _updateChatDisplay(message);
+  }
+
+  // Create a new function with a different name
+  function _updateChatDisplay(message) {
     var chatBox = document.getElementById("chat-canvas-body");
     if (message.trim() !== "") {
       chatBox.innerHTML += `<div class="row justify-content-start mb-4">
@@ -39,6 +46,7 @@ $(document).ready(function () {
       chatBox.scrollTop = chatBox.scrollHeight;
     }
   }
+
   eel.expose(hideLoader);
   function hideLoader() {
     $("#Loader").attr("hidden", true);
